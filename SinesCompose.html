@@ -1,0 +1,269 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>正弦信号合成</title>
+    <script type="text/javascript">
+
+        
+        var _ox = 510;
+        var _oy = 310;
+
+        var _xLength;
+        var _yLength;
+
+        var _composedColor;
+
+
+        function clearCanvas()  
+        {  
+            var c=document.getElementById("myCanvas");
+            var cxt = c.getContext("2d");
+            cxt.clearRect(0, 0, c.width, c.height);  
+        }  
+
+        function drawXY() {
+
+            var c = document.getElementById("myCanvas");
+
+            c.width = _xLength + 20;;
+            c.height = _yLength + 20;
+
+
+            var cxt = c.getContext("2d");
+
+            cxt.beginPath();
+            cxt.moveTo(10, 10);
+            cxt.lineTo(10, _yLength + 10);
+            cxt.moveTo(10, _oy);
+            cxt.lineTo(_xLength + 10, _oy);
+            cxt.strokeStyle = "blue";
+            cxt.stroke();
+        }
+
+       
+
+        function OnLoad() {
+
+            Init();
+
+            drawXY();
+        }
+
+
+        function ParsePara(str) {
+
+            var arr = str.split(",");
+
+            if (arr.length < 5)
+                throw "“" + str + "” 中用 逗号 , 隔开的参数只有 " + arr.length + " 个，应该有 振幅 周期 初始相位 增量 颜色 5 个参数 。";
+
+            var para = new Object();
+
+            var A = arr[0];
+            var T = arr[1];
+            var puxi = arr[2];
+            var b = arr[3];
+            var color = arr[4];
+
+            para.A = parseFloat(A);
+            para.T = parseFloat(T);
+            para.puxi = parseFloat(puxi);
+            para.b = parseFloat(b);
+            para.color = color;
+
+            if (isNaN(para.A))
+            {
+                throw "“" + str + "” 的第 1 个参数 振幅 “" + A + "” 应是数字 。";
+            }
+            if (isNaN(para.T))
+            {
+                throw "“" + str + "” 的第 2 个参数 周期 “" + T + "” 应是数字 。";
+            }
+            if (isNaN(para.puxi))
+            {
+                throw "“" + str + "” 的第 3 个参数 初始相位 “" + puxi + "” 应是数字 。";
+            }
+            if (isNaN(para.b))
+            {
+                throw "“" + str + "” 的第 4 个参数 增量 “" + b + "” 应是数字 。";
+            }
+
+            if (!color) {
+
+                throw "“" + str + "” 缺少第 5 个参数 颜色 。";
+            }
+
+            return para;
+
+        }
+
+        function Init() {
+
+            _xLength = parseInt(document.getElementById("txtXLength").value);
+            _yLength = parseInt(document.getElementById("txtYLength").value);
+
+            _ox = 10;
+            _oy = _yLength / 2 + 10;
+
+
+            _composedColor = document.getElementById("txtComposedColor").value;
+        }
+
+        function btnView_Click() {
+
+
+            Init();
+
+            if (isNaN(_xLength)) {
+
+                alert("x 轴 长度 应填写 数字 。");
+                return;
+            }
+
+            if (isNaN(_yLength)) {
+
+                alert("y 轴 长度 应填写 数字 。");
+                return;
+            }
+
+
+            var paraStr = document.getElementById("txtPara").value;
+
+            if (!paraStr)
+            {
+                alert("应填写 正弦信号分量 。");
+                return;
+            }
+
+            var arr = paraStr.split(";");
+
+            _paras = [];
+
+            for (let i = 0; i < arr.length; i++) {
+
+                let str = arr[i].trim();
+
+                if (str == "")
+                    continue;
+
+                try {
+                    _paras[_paras.length] = ParsePara(arr[i]);
+                }
+                catch (e) {
+                    alert(e);
+                    return;
+                }
+                
+            }
+
+
+
+            clearCanvas();
+
+            drawXY();
+
+
+            var lastPoints = [];
+            var composedLastPoint;
+
+            var currentPoint;
+
+            var canvas = document.getElementById("myCanvas");
+
+
+            for (let i = 0; i < _xLength; i++) {
+
+                var composedY = 0;
+
+                for (let j = 0; j < _paras.length; j++)
+                {
+                    let para = _paras[j];
+
+                    let q = (i + para.puxi) % para.T / para.T * 2 * 3.14;
+
+                    let y = Math.sin(q);
+
+                    y = y * para.A + para.b;
+
+                    
+                    composedY += y;
+
+                    currentPoint = { x: _ox + i, y: _oy - y }
+                    
+
+                    let lastPoint = lastPoints[j];
+
+                    if (!lastPoint) {
+
+                        lastPoint = currentPoint;
+                    }
+
+                    drawLine(lastPoint, currentPoint, para.color);
+
+                    lastPoints[j] = currentPoint;
+
+                }
+
+
+                currentPoint = { x: _ox + i, y: _oy - composedY };
+
+                if (!composedLastPoint) {
+
+                    composedLastPoint = currentPoint;
+                }
+
+                drawLine(composedLastPoint, currentPoint, _composedColor);
+
+                composedLastPoint = currentPoint;
+                
+            }
+        }
+
+        function drawLine(p1, p2, color) {
+
+            var canvas =document.getElementById("myCanvas");
+            var context = canvas.getContext("2d");
+
+            context.beginPath();
+
+            context.moveTo(p1.x, p1.y);
+
+            context.strokeStyle = color;
+            context.lineWidth = 2;
+            context.lineTo(p2.x, p2.y);
+
+            context.stroke();
+        }
+
+        function btnClear_Click() {
+
+            clearCanvas();
+
+            drawXY();
+        }
+
+    </script>
+</head>
+<body onload="OnLoad();">
+
+    本程序演示 一些 正弦信号 合成得到的 合成信号 。 详细说明 见 《一个 周期信号 分解为 若干个 正弦信号》 <a target="_blank" href="https://www.cnblogs.com/KSongKing/p/12853392.html">https://www.cnblogs.com/KSongKing/p/12853392.html</a> 。<br />
+    在下面“正弦信号”文本框里输入一个或多个正弦信号，点击 “显示” 按钮会显示这些正弦信号及其合成的信号，合成是指这些正弦信号用加法加起来 。 <br />
+    每个正弦信号的参数之间用 分号 ; 隔开，一个正弦信号包括 5 个参数，分别是 振幅、周期、初始相位、增量、颜色，用 逗号 , 隔开 。<br />
+    振幅、周期、初始相位、增量 以 像素 为单位， 增量 是 沿 y 方向的平移量， 颜色 是 信号曲线 的 颜色，使用 Html 的颜色表示法， 比如 颜色英文名 、RGB 。
+    <br /><br />
+
+    x 轴 长度 ：   <input id="txtXLength" value="1250" /> 像素<br />
+    y 轴 长度 ：  <input id="txtYLength" value="350" /> 像素 <br />
+
+    合成信号 颜色 ：   <input id="txtComposedColor" value="green" /><br />
+
+    正弦信号 ：<br /><textarea id="txtPara" style="width:1000px; height:40px">80,100,0,0,red; 50,30,0,0,orange; 30,300,0,0,#88AABB</textarea><br />
+    <br />
+    <input type="button" value="显示" onclick="btnView_Click();" style="width:200px" />
+    <input type="button" value="清空" onclick="btnClear_Click();" style="width:200px" />
+    <br /><br />
+    <canvas id="myCanvas" style="border: solid 1px;"></canvas>
+</body>
+</html>
